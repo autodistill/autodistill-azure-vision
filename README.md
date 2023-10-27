@@ -23,7 +23,7 @@ You can then use your trained model on your computer using Autodistill, or at th
 
 Read the full [Autodistill documentation](https://autodistill.github.io/autodistill/).
 
-Read the [Azure Vision Autodistill documentation](https://autodistill.github.io/autodistill/base_models/azure_vision/).
+Read the [Autodistill Azure Vision documentation](https://autodistill.github.io/autodistill/base_models/azure_vision/).
 
 ## Installation
 
@@ -37,7 +37,7 @@ To use Azure Vision with autodistill, you need to install the following dependen
 pip install autodistill-azure-vision
 ```
 
-Next, you will need to create an Azure account. Once you have an Azure account, create a "Computer vision" deployment in the "Azure AI services" dashboard in Azure.
+Next, you will need to [create an Azure account](https://azure.microsoft.com/en-gb/get-started/azure-portal). Once you have an Azure account, create a "Computer vision" deployment in the "Azure AI services" dashboard in Azure.
 
 This deployment will give you two API keys and an endpoint URL. You will need one of these API keys and the endpoint URL to use this Autodistill module.
 
