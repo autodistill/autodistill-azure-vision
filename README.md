@@ -3,64 +3,133 @@
     <a align="center" href="" target="_blank">
       <img
         width="850"
-        src="https://media.roboflow.com/open-source/autodistill/autodistill-banner.png?3"
+        src="https://media.roboflow.com/open-source/autodistill/autodistill-banner.png"
       >
     </a>
   </p>
 </div>
 
-# Autodistill Base Model Template
+# Autodistill Azure Vision Module
 
-**⚠️ Note: Before you start building a Base Model, check out our [Available Models](https://docs.autodistill.com/#available-models) directory to see if a model is already being implemented. If your desired model is being implemented, check the [Autodistill](https://github.com/autodistill/autodistill) GitHub Issues for progress. We encourage you to offer support to models you want to see in Autodistill if work is already being done on them.**
+This repository contains the code supporting the Azure Vision module for use with [Autodistill](https://github.com/autodistill/autodistill).
 
-This repository contains a template for use in creating a Base Model for [Autodistill](https://github.com/autodistill/autodistill).
+The [Azure Vision Image Analysis 4.0 API](https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/how-to/call-analyze-image-40?tabs=csharp&pivots=programming-language-rest-api) enables you to detect objects in images.
 
-A Base Model is a large model that you can use for automatically labeling data. Autodistill enables you to connect Base Models to a smaller Target Model. A new model is trained using the Target Model architecture and your labeled data. This model will be smaller and thus more cost effective to run.
+With this package, you can use the API to automatically label data for use in training a fine-tuned computer vision model.
 
-Autodistill is an ecosystem of Base and Target Models, with the main [Autodistill](https://github.com/autodistill/autodistill) repository acting as the bridge between the two.
+This is ideal if you want to train a model that you own on a custom dataset.
 
-This repository contains a starter template from which you can create a Base Model extension.
+You can then use your trained model on your computer using Autodistill, or at the edge or in the cloud by deploying with [Roboflow Inference](https://inference.roboflow.com).
 
 Read the full [Autodistill documentation](https://autodistill.github.io/autodistill/).
-## Steps to Build a Base Model
 
-To build a base model, first rename the `src` directory to the name of the model you want to implement:
+Read the [Azure Vision Autodistill documentation](https://autodistill.github.io/autodistill/base_models/azure_vision/).
 
-```
-mkdir autodistill_model_name
-```
+## Installation
 
-Use underscores to separate words in the folder name.
+> [!NOTE]  
+> Using this project will incur billing charges for API calls to the [Azure Vision Image Analysis 4.0 API](https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/how-to/call-analyze-image-40?tabs=csharp&pivots=programming-language-rest-api).
+> Refer to the [Azure Computer Vision pricing](https://azure.microsoft.com/en-gb/pricing/details/cognitive-services/computer-vision/) for more information and to calculate your expected pricing. This package makes one API call per image you want to label.
 
-Next, open the `model.py` file. This is the file where your model loading and inference code will be stored. If you need to write helper functions for use with your model -- for example, long methods for loading data, processing extensions -- you may opt to create new files to store the helper scripts.
+To use Azure Vision with autodistill, you need to install the following dependency:
 
-In `model.py`, replace the `Model` class name with the name of your model.
-
-Next, implement the following functions:
-
-1. `__init__`: Code for loading the model.
-2. `predict`: A function that takes in an image name, runs inference, and returns a `supervision` Detections object (object detection) or a `supervision` Classifications object (classification).
-
-Replace the import statement in the `__init__.py` file in your model directory to point to your model. You only need to import the model, such as:
-
-```
-from autodistill_clip.clip_model import CLIP
+```bash
+pip install autodistill-azure-vision
 ```
 
-Your version should be set in the `__init__.py` file as `0.1.0` before submitting your model for review.
+Next, you will need to create an Azure account. Once you have an Azure account, create a "Computer vision" deployment in the "Azure AI services" dashboard in Azure.
 
-Update the `setup.py` file to use the name of your model where appropriate. Add all of the requisite dependencies to the `install_requires` section.
+This deployment will give you two API keys and an endpoint URL. You will need one of these API keys and the endpoint URL to use this Autodistill module.
 
-Your Base Model should feature a README that shows a minimal example of how to use the base model. This should only be a few lines of code. Refer to `README_EXAMPLE.md` for an example of an Autodistill Base Model README. Feel free to copy this example and replace all parts as required.
+Set your API key and endpoint URL in your environment:
 
-Your package must be licensed under the same license as the model you are using (i.e. if your model uses an Apache 2.0 license, your Autodistill extension must use the same license). Your license should be in a file called `LICENSE`, stored in the root directory of your Autodistill extension GitHub repository.
+```
+export AZURE_VISION_SUBSCRIPTION_KEY=<your api key>
+export AZURE_VISION_ENDPOINT=<your endpoint>
+```
 
-Update your README to note the license applied to your package.
+Use the quickstart below to start labeling images.
 
-When your Autodistill extension is ready for testing, open an Issue in the main [Autodistill](https://github.com/autodistill/autodistill) repository with a link to a public GitHub repository that contains your code.
+## Quickstart
 
-An Autodistill maintainer will review your code. If accepted, we will:
+### Label a Single Image
 
-1. Add your package to the [Autodistill documentation](https://docs.autodistill.com).
-2. Package your project up to PyPi and publish it as an official `autodistill` extension.
-3. Announce your project on social media.
+```python
+from autodistill_azure_vision import AzureVision
+from autodistill.detection import CaptionOntology
+
+# define an ontology to map class names to our Azure Custom Vision prompt
+# the ontology dictionary has the format {caption: class}
+# where caption is the prompt sent to the base model, and class is the label that will
+# be saved for that caption in the generated annotations
+# then, load the model
+base_model = AzureVision(
+    ontology=CaptionOntology(
+        {
+            "animal": "animal",
+            "a forklift": "forklift"
+        }
+    ),
+    endpoint=os.environ["AZURE_VISION_ENDPOINT"],
+    subscription_key=os.environ["AZURE_VISION_SUBSCRIPTION_KEY"]
+)
+
+results = base_model.predict("image.jpeg")
+
+print(results)
+
+# annotate predictions on an image
+classes = base_model.ontology.classes()
+
+box_annotator = sv.BoxAnnotator()
+
+labels = [
+	f"{classes[class_id]} {confidence:0.2f}"
+	for _, _, confidence, class_id, _
+	in detections
+]
+
+image = cv2.imread("image.jpeg")
+
+annotated_frame = box_annotator.annotate(
+	scene=image.copy(),
+	detections=detections,
+	labels=labels
+)
+
+sv.plot_image(image=annotated_frame, size=(16, 16))
+```
+
+### Label a Folder of Images
+
+
+```python
+from autodistill_azure_vision import AzureVision
+from autodistill.detection import CaptionOntology
+
+# define an ontology to map class names to our Azure Custom Vision prompt
+# the ontology dictionary has the format {caption: class}
+# where caption is the prompt sent to the base model, and class is the label that will
+# be saved for that caption in the generated annotations
+# then, load the model
+base_model = AzureVision(
+    ontology=CaptionOntology(
+        {
+            "animal": "animal",
+            "a forklift": "forklift"
+        }
+    ),
+    endpoint=os.environ["AZURE_VISION_ENDPOINT"],
+    subscription_key=os.environ["AZURE_VISION_SUBSCRIPTION_KEY"]
+)
+
+base_model.label("./context_images", extension=".jpeg")
+```
+
+## License
+
+This project is licensed under an [MIT license](LICENSE).
+
+## 🏆 Contributing
+
+We love your input! Please see the core Autodistill [contributing guide](https://github.com/autodistill/autodistill/blob/main/CONTRIBUTING.md) to get started. Thank you 🙏 to all our contributors!
